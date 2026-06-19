@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Painel Administrativo</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+<div class="menu-container">
+  <h1 class="cort">Painel Administrativo</h1>
+
+  <div class="menu-grid">
+    <div class="menu-btn" onclick="ir('admin-pessoas.html')">
+      <span>👤</span>
+      Pessoas
+    </div>
+
+    <div class="menu-btn" onclick="ir('admin-produtos.html')">
+      <span>📦</span>
+      Produtos
+    </div>
+
+    <div class="menu-btn" onclick="ir('admin-estoque.html')">
+      <span>📊</span>
+      Estoque
+    </div>
+
+    <div class="btn-config admin-centralizado" onclick="ir('admin-config.html')">
+      <span>⚙️</span>
+      Administração
+    </div>
+  </div>
+</div>
+
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const usuarioLogado =
+  localStorage.getItem(
+    'usuarioEmail'
+  );
+
+if(!usuarioLogado){
+
+  window.location.href =
+    'login.html';
+}
+
+async function validarAcessoAdmin(){
+
+  const snapshot =
+    await getDocs(
+      collection(db, "admin_access")
+    );
+
+  let acessoLiberado = false;
+
+  snapshot.forEach((documento) => {
+
+    const acesso =
+      documento.data();
+
+    if(
+      acesso.email === usuarioLogado &&
+      acesso.ativo === true
+    ){
+
+      acessoLiberado = true;
+    }
+  });
+
+  if(!acessoLiberado){
+
+    alert(
+      'Você não possui acesso administrativo'
+    );
+
+    localStorage.removeItem(
+      'usuarioEmail'
+    );
+
+    window.location.href =
+      'login.html';
+
+    return;
+  }
+}
+
+function ir(pagina){
+
+  window.location.href =
+    pagina;
+}
+
+window.ir = ir;
+
+await validarAcessoAdmin();
+
+</script>
+</body>
+</html>

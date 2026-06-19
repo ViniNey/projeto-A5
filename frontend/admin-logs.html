@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Histórico de Alterações</title>
+
+<link rel="stylesheet" href="css/admin-logs.css">
+</head>
+
+<body>
+
+<div class="card">
+
+  <div class="topbar">
+
+    <h2>📜 Histórico de Alterações</h2>
+
+    <button
+      onclick="location.href='admin-config.html'"
+      class="botaomenu"
+    >
+      ⬅ Voltar
+    </button>
+
+  </div>
+
+  <div class="filtros">
+
+    <input  id="filtro" type="text" placeholder="Buscar ação ou usuário">
+    
+    <input id="dataInicio" type="date">
+    <input id="dataFim" type="date">
+
+    <button onclick="carregarLogs()">
+      Buscar
+    </button>
+
+  </div>
+
+  <div id="listaLogs"></div>
+
+</div>
+
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const usuarioLogado =
+  localStorage.getItem(
+    'usuarioEmail'
+  );
+
+const isAdmin =
+  localStorage.getItem(
+    'isAdmin'
+  );
+
+if(
+  !usuarioLogado ||
+  isAdmin !== 'true'
+){
+  window.location.href =
+    'login.html';
+}
+
+const hoje = new Date();
+
+document.getElementById('dataFim').value =
+  hoje.toISOString().slice(0,10);
+
+document.getElementById('dataInicio').value =
+  hoje.getFullYear() +
+  '-' +
+  String(
+    hoje.getMonth() + 1
+  ).padStart(2,'0') +
+  '-01';
+
+async function carregarLogs(){
+
+  const div =
+    document.getElementById(
+      'listaLogs'
+    );
+
+  div.innerHTML =
+    '<p class="loading">Carregando...</p>';
+
+  const filtro =
+    document
+      .getElementById('filtro')
+      .value
+      .trim()
+      .toLowerCase();
+  
+  const dataInicio =
+    document.getElementById('dataInicio').value;
+
+  const dataFim =
+    document.getElementById('dataFim').value;
+
+  const snapshot =
+    await getDocs(
+      collection(db, "admin_logs")
+    );
+
+  const logs = [];
+
+  snapshot.forEach((documento) => {
+
+    logs.push({
+      id: documento.id,
+      ...documento.data()
+    });
+  });
+
+  logs.sort((a,b) =>
+    new Date(b.data) -
+    new Date(a.data)
+  );
+
+  div.innerHTML = '';
+
+  let encontrou = false;
+
+  logs.forEach((log) => {
+
+    const dataLog = new Date(log.data);
+
+    // filtro data inicial
+    if(dataInicio){
+
+      const inicio = new Date(
+        dataInicio + 'T00:00:00'
+      );
+
+      if(dataLog < inicio){
+        return;
+      }
+    }
+
+    // filtro data final
+    if(dataFim){
+
+      const fim = new Date(
+        dataFim + 'T23:59:59'
+      );
+
+      if(dataLog > fim){
+        return;
+      }
+    }
+
+    const textoBusca = `
+      ${log.acao}
+      ${log.descricao}
+      ${log.usuario}
+    `.toLowerCase();
+
+    if(
+      filtro &&
+      !textoBusca.includes(filtro)
+    ){
+      return;
+    }
+
+    encontrou = true;
+
+    const data =
+      new Date(log.data)
+      .toLocaleString('pt-BR');
+
+    div.innerHTML += `
+
+      <div class="log-card">
+
+        <div class="log-topo">
+
+          <span class="acao">
+            ${log.acao}
+          </span>
+
+          <span class="data">
+            ${data}
+          </span>
+
+        </div>
+
+        <div class="descricao">
+          ${log.descricao || '-'}
+        </div>
+
+        <div class="usuario">
+          👤 ${log.usuario}
+        </div>
+
+      </div>
+    `;
+  });
+
+  if(!encontrou){
+
+    div.innerHTML =
+      '<p class="sem-logs">Nenhum log encontrado</p>';
+  }
+}
+
+document
+  .getElementById('filtro')
+  .addEventListener(
+    'keydown',
+    function(e){
+
+      if(e.key === 'Enter'){
+
+        carregarLogs();
+      }
+    }
+  );
+
+document
+  .getElementById('dataInicio')
+  .addEventListener('change', carregarLogs);
+
+document
+  .getElementById('dataFim')
+  .addEventListener('change', carregarLogs);
+
+carregarLogs();
+
+window.carregarLogs = carregarLogs;
+
+</script>
+</body>
+</html>
