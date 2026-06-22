@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Controle de Acessos</title>
+
+<link rel="stylesheet" href="css/admin-acessos.css">
+</head>
+<body>
+
+<div class="card">
+
+  <div class="topbar">
+
+    <h2>🔐 Controle de Acessos</h2>
+
+    <button
+      onclick="location.href='admin-config.html'"
+      class="botaomenu"
+    >
+      ⬅ Voltar
+    </button>
+
+  </div>
+
+  <div class="add-area">
+
+    <input
+      id="novoEmail"
+      type="email"
+      placeholder="Escreva o email"
+    >
+
+    <button onclick="adicionarEmail()">
+      Adicionar
+    </button>
+
+  </div>
+
+  <div id="listaAcessos"></div>
+
+</div>
+
+<div
+  id="toastContainer"
+  class="toast-container"
+></div>
+
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import { registrarLog } from "./registrarLog.js";
+
+import {
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const usuarioLogado =
+  localStorage.getItem(
+    'usuarioEmail'
+  );
+
+const isAdmin =
+  localStorage.getItem(
+    'isAdmin'
+  );
+
+if(
+  !usuarioLogado ||
+  isAdmin !== 'true'
+){
+  window.location.href =
+    'login.html';
+}
+
+function mostrarToast(
+  mensagem,
+  tipo = 'sucesso'
+){
+
+  const container =
+    document.getElementById(
+      'toastContainer'
+    );
+
+  const toast =
+    document.createElement('div');
+
+  toast.className =
+    `toast ${tipo}`;
+
+  toast.textContent =
+    mensagem;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+
+    toast.style.opacity = '0';
+
+    toast.style.transform =
+      'translateX(30px)';
+
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+
+  }, 3000);
+}
+
+async function carregarAcessos(){
+
+  const div =
+    document.getElementById(
+      'listaAcessos'
+    );
+
+  div.innerHTML = '';
+
+  const snapshot =
+    await getDocs(
+      collection(db, "admin_access")
+    );
+
+  const acessos = [];
+
+  snapshot.forEach((documento) => {
+
+    acessos.push({
+      id: documento.id,
+      ...documento.data()
+    });
+  });
+
+  acessos.sort((a,b) =>
+    a.email.localeCompare(
+      b.email,
+      'pt-BR'
+    )
+  );
+
+  acessos.forEach((a) => {
+
+    div.innerHTML += `
+
+      <div class="acesso-card">
+
+        <div class="info">
+
+          <b>
+            ${a.email}
+          </b>
+
+          <span class="${
+            a.ativo
+            ? 'ativo'
+            : 'inativo'
+          }">
+
+            ${
+              a.ativo
+              ? 'Ativo'
+              : 'Bloqueado'
+            }
+
+          </span>
+
+        </div>
+
+        <div class="acoes">
+
+          <button
+            class="btn-toggle"
+            onclick="toggleAcesso(
+              '${a.id}',
+              ${a.ativo}
+            )"
+          >
+
+            ${
+              a.ativo
+              ? 'Bloquear'
+              : 'Liberar'
+            }
+
+          </button>
+
+          <button
+            class="btn-delete"
+            onclick="removerAcesso(
+              '${a.id}'
+            )"
+          >
+            ❌
+          </button>
+
+        </div>
+
+      </div>
+    `;
+  });
+}
+
+async function adicionarEmail(){
+
+  const input =
+    document.getElementById(
+      'novoEmail'
+    );
+
+  const email =
+    input.value
+    .trim()
+    .toLowerCase();
+
+  if(!email){
+
+    mostrarToast(
+      'Digite um e-mail',
+      'erro'
+    );
+
+    return;
+  }
+
+  if(!email.includes('@')){
+
+    mostrarToast(
+      'E-mail inválido',
+      'erro'
+    );
+
+    return;
+  }
+
+  await addDoc(
+    collection(db, "admin_access"),
+    {
+      email,
+      ativo: true,
+      criadoEm:
+        new Date().toISOString()
+    }
+  );
+
+  await registrarLog(
+    'Acesso liberado',
+    `${email} recebeu acesso admin`
+  );
+
+  input.value = '';
+
+  mostrarToast(
+    'Acesso liberado'
+  );
+
+  carregarAcessos();
+}
+
+async function removerAcesso(id){
+
+  const snapshot =
+    await getDocs(
+      collection(db, "admin_access")
+    );
+
+  let emailRemovido = '';
+
+  snapshot.forEach((docu) => {
+
+    if(docu.id === id){
+
+      emailRemovido =
+        docu.data().email;
+    }
+  });
+
+  await deleteDoc(
+    doc(db, "admin_access", id)
+  );
+
+  await registrarLog(
+    'Acesso removido',
+    `${emailRemovido} perdeu acesso admin`
+  );
+
+  mostrarToast(
+    'Acesso removido'
+  );
+
+  carregarAcessos();
+}
+
+async function toggleAcesso(
+  id,
+  ativoAtual
+){
+
+  await updateDoc(
+    doc(db, "admin_access", id),
+    {
+      ativo: !ativoAtual
+    }
+  );
+
+  await registrarLog(
+    !ativoAtual
+        ? 'Acesso liberado'
+        : 'Acesso bloqueado',
+
+    !ativoAtual
+        ? 'Usuário liberado no admin'
+        : 'Usuário bloqueado do admin'
+  );
+
+  mostrarToast(
+    !ativoAtual
+    ? 'Acesso liberado'
+    : 'Acesso bloqueado'
+  );
+
+  carregarAcessos();
+}
+
+document
+  .getElementById('novoEmail')
+  .addEventListener(
+    'keydown',
+    function(e){
+
+      if(e.key === 'Enter'){
+
+        e.preventDefault();
+
+        adicionarEmail();
+      }
+    }
+  );
+
+carregarAcessos();
+
+window.adicionarEmail = adicionarEmail;
+window.removerAcesso = removerAcesso;
+window.toggleAcesso = toggleAcesso;
+
+</script>
+
+</body>
+</html>

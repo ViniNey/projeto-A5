@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sucesso</title>
+
+<style>
+body{
+  margin: 0;
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: #0C0C0B;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+
+  background-image: url("imagens/logo-nova.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 83%;
+
+  opacity: 0.7;
+  z-index: -1;
+}
+
+.card{
+  background:#fff;
+  padding:30px 40px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 4px 15px rgba(0,0,0,0.1);
+}
+
+.card h2{
+  color:#2ecc71;
+  margin-bottom:20px;
+}
+
+.card button{
+  padding:12px 20px;
+  border:none;
+  border-radius:6px;
+  background:#383836;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.card button:hover{
+  background:#1d1d1d;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>✔ Produto(s) lançado(s) com sucesso</h2>
+  <button onclick="location.href='index.html'">
+    Registrar novos produtos
+  </button>
+</div>
+
+</body>
+</html>
